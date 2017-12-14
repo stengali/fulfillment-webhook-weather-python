@@ -24,7 +24,7 @@ from urllib.error import HTTPError
 
 import json
 import os
-
+import pyotp
 from flask import Flask
 from flask import request
 from flask import make_response
@@ -40,7 +40,7 @@ def webhook():
     print("Request:")
     print(json.dumps(req, indent=4))
 
-    res = processRequest(req)
+    res = processOTPRequest(req)
 
     res = json.dumps(res, indent=4)
     # print(res)
@@ -62,6 +62,23 @@ def processRequest(req):
     res = makeWebhookResult(data)
     return res
 
+def processOTPRequest(req):
+    if req.get("result").get("action") == "yahooWeatherForecast":
+        baseurl = "https://query.yahooapis.com/v1/public/yql?"
+	yql_query = makeYqlQuery(req)
+	if yql_query is None:
+	    return {}
+	yql_url = baseurl + urlencode({'q': yql_query}) + "&format=json"
+	result = urlopen(yql_url).read()
+	data = json.loads(result)
+	res = makeWebhookResult(data)
+	return res
+    elif req.get("result").get("action") == "otpVerification":
+        otp_query = makeOTPQuery(req)
+        if otp_query is None:
+            return {}
+        res = checkOTP(otp_query)
+	return res
 
 def makeYqlQuery(req):
     result = req.get("result")
@@ -72,6 +89,14 @@ def makeYqlQuery(req):
 
     return "select * from weather.forecast where woeid in (select woeid from geo.places(1) where text='" + city + "')"
 
+def makeOTPQuery(req):
+    result = req.get("result")
+    parameters = result.get("parameters")
+    secretcode = parameters.get("secret-code")
+    if secretcode is None:
+        return None
+
+    return secretcode
 
 def makeWebhookResult(data):
     query = data.get('query')
@@ -112,6 +137,18 @@ def makeWebhookResult(data):
         "source": "apiai-weather-webhook-sample"
     }
 
+def checkOTP(userOTP):
+    totp = pyotp.TOTP("JBSWY3DPEHPK3PXP")
+    otp = totp.now()
+    if userOTP == otp:
+	speech = "Got it.  Do you need to file dispute - charge back or change billing agreements?"
+    else:
+	speech = "Wrong OTP : Oops that was wrong OPT. Please say that again."
+    return {
+            "speech": speech,
+            "displayText": speech,
+            "source": "apiai-weather-webhook-sample"
+    }
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
