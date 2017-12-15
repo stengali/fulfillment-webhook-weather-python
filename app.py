@@ -53,9 +53,68 @@ def processRequest(req):
     elif req.get("result").get("action") == 'emailVerification':
         print("333")
         res = processEmailVerificationRequest(req)
+    elif req.get("result").get("action") == 'disputeAction':
+        print("444")
+        res = processDisputeRequest(req)
+    elif req.get("result").get("action") == 'txnDateAction':
+        print("555")
+        res = processDisputTxnDateRequest(req)
     else:
         res = {}
     return res
+
+#processDisputTxnDateRequest
+def processDisputTxnDateRequest(req):
+    email_txnCount_onSomeDay = {'nikhilraog@gmail.com': 1, 'sandeeptengli@gmail.com': 1}
+    result = req.get("result")
+    parameters = result.get("parameters")
+    date = parameters.get("date")
+
+    #default 
+    numTxn = 0
+    contexts = result.get("contexts")
+
+    if contexts is not None:
+        for  ctx in contexts:
+            if  str(ctx.get("name")) == 'contextout':
+                userEmail = ctx.get("parameters").get("Email").lower()
+                print(" processDisputTxnDateRequest : Matched with email: ", userEmail)
+                if userEmail is not None:
+                    numTxn = email_txnCount_onSomeDay[userEmail]
+                    print("processDisputTxnDateRequest userEmail and numTxns", userEmail, numTxn)
+                    speech = "Ok. I found "+ str(numTxn)+ " transactios from Walmart posted on your account "+ str(date)+ ". Shall I proceed with filling Disput? Pick On of these."
+                    speech += "1. Unauthorized transaction, 2. Item not received, 3. Debitted Incorrect amount, 4. Chargeback,  5.Others"
+                    print(speech)
+
+                    return {
+                        "speech": speech,
+                        "displayText": speech,
+                        "source": "processDisputTxnDateRequest"
+                    }
+        return{
+            "speech": 'I could not find any transaction on that day? Please check the date and say again',
+            "displayText": 'I could not find any transaction on that day? Please check the date and say again',
+            "source": "processDisputTxnDateRequest"
+        }
+        
+
+
+            
+    return{
+        "speech": 'I could not find any transaction on that day? Please check the date and say again',
+        "displayText": 'I could not find any transaction on that day? Please check the date and say again',
+        "source": "makeEmailVerificationResult"
+    }
+
+
+#Dispute respose
+def processDisputeRequest(req):
+    speech = "Ok. I can help you, Could you tell me the more information on that? Say transaction Date or Store/Merchant name?"
+    return {
+        "speech": speech,
+        "displayText": speech,
+        "source": "makeEmailVerificationResult"
+    }
 
 def makeYqlQuery(req):
     result = req.get("result")
@@ -64,6 +123,7 @@ def makeYqlQuery(req):
     if city is None:
         return None
     return "select * from weather.forecast where woeid in (select woeid from geo.places(1) where text='" + city + "')"
+
 def makeWebhookResult(data):
     query = data.get('query')
     if query is None:
@@ -136,6 +196,7 @@ def processEmailVerificationRequest(req):
         return {}
     resp = makeEmailVerificationResult(emailId)
     return resp
+
 def makeEmailVerificationResult(email):
     verifiedList = ['nikhilraog@gmail.com', 'rgautam@gmail.com', 'sandeeptengli@gmail.com', 'aggarwal@gmail.com']
     print("makeEmailVerificationResult ,, email is ", email)
@@ -150,6 +211,7 @@ def makeEmailVerificationResult(email):
             "source": "makeEmailVerificationResult"
     }
     
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     print("Starting app on port %d" % port)
