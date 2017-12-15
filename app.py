@@ -136,7 +136,6 @@ def processEmailVerificationRequest(req):
         return {}
     resp = makeEmailVerificationResult(emailId)
     return resp
-    
 def makeEmailVerificationResult(email):
     verifiedList = ['nikhilraog@gmail.com', 'rgautam@gmail.com', 'sandeeptengli@gmail.com', 'aggarwal@gmail.com']
     print("makeEmailVerificationResult ,, email is ", email)
