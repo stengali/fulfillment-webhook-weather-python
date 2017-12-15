@@ -23,10 +23,15 @@ from urllib.error import HTTPError
 import json
 import os
 import pyotp
+import time
 
 from flask import Flask
 from flask import request
 from flask import make_response
+from firebase import firebase
+
+
+firebase = firebase.FirebaseApplication('https://brewfire-1ba0d.firebaseio.com/', None)
 
 # Flask app should start in global layout
 app = Flask(__name__)
@@ -43,6 +48,7 @@ def webhook():
     return r
 
 def processRequest(req):
+
     print("ACTION IS : ",req.get("result").get("action"))
     if req.get("result").get("action") == "yahooWeatherForecast":
         print("111")
@@ -62,6 +68,9 @@ def processRequest(req):
     elif req.get("result").get("action") == 'NotReceivedTheProduct.NotReceivedTheProduct-custom.NotReceivedTheProduct-custom-no':
         print("555")
         res = processDisputeTxnINRFileDispute(req)
+    elif req.get("result").get("action") == "storefiredata":
+        print("111")
+        processDatabaseRequest(req)
     else:
         res = {}
     return res
@@ -215,7 +224,8 @@ def makeEmailVerificationResult(email):
     verifiedList = ['nikhilraog@gmail.com', 'rgautam@gmail.com', 'sandeeptengli@gmail.com', 'aggarwal@gmail.com']
     print("makeEmailVerificationResult ,, email is ", email)
     if  email is not None:
-        if email in verifiedList: 
+        emailfromDB = fetchUserData(email)
+        if  emailfromDB is not None:
             speech = "Got it. Let me pull up your account. To get you further help, please say the OPT that I have sent to your phone."
         else:
             speech = "Oops I did not find any such account. Please say your paypal linked email address"
@@ -225,6 +235,38 @@ def makeEmailVerificationResult(email):
             "source": "makeEmailVerificationResult"
     }
     
+
+def fetchUserData(email):
+    print("fetch email",email)
+    result = firebase.get("/userdata",None)
+    for key,value in result.iteritems():
+        dict = json.loads(value)
+        print(dict)
+        if email == dict["email"]:
+            return dict
+    return None
+
+def processDatabaseRequest(req):
+    print("msafoiqw",req)
+    print(firebase)
+    if req.get("result").get("action") == "storefiredata":
+        print("I'm here")
+        result = req.get("result")
+        parameters = result.get("parameters")
+        operation= parameters.get("operation")
+        email = parameters.get("email")
+        type = parameters.get("issue-type")
+        details = parameters.get("issue-details")
+        summary = parameters.get("issue-summary")
+        timestamp = time.time()
+        d = fetchUserData(email)
+        if d != None:
+            data = {'name': d["name"], 'phone': d['phone'], 'email': email, 'type': type, 'details': details, 'summary':summary, 'timestamp':timestamp}
+        else:
+            data = {'email': email, 'type': type, 'details': details, 'summary':summary, 'timestamp':timestamp}
+        sent = json.dumps(data)
+        print(sent)
+        result = firebase.post("/"+operation, sent)
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
