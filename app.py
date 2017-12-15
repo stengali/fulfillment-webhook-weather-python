@@ -59,9 +59,23 @@ def processRequest(req):
     elif req.get("result").get("action") == 'txnDateAction':
         print("555")
         res = processDisputTxnDateRequest(req)
+    elif req.get("result").get("action") == 'NotReceivedTheProduct.NotReceivedTheProduct-custom.NotReceivedTheProduct-custom-no':
+        print("555")
+        res = processDisputeTxnINRFileDispute(req)
     else:
         res = {}
     return res
+
+
+
+def processDisputeTxnINRFileDispute(req):
+    speech = 'Ok. Filing the dispute for item not received. Have a good day'
+    return {
+            "speech": speech,
+            "displayText": speech,
+            "source": "makeEmailVerificationResult"
+    }
+
 
 #processDisputTxnDateRequest
 def processDisputTxnDateRequest(req):
@@ -82,7 +96,7 @@ def processDisputTxnDateRequest(req):
                 if userEmail is not None:
                     numTxn = email_txnCount_onSomeDay[userEmail]
                     print("processDisputTxnDateRequest userEmail and numTxns", userEmail, numTxn)
-                    speech = "Ok. I found "+ str(numTxn)+ " transactios from Walmart posted on your account "+ str(date)+ ". Shall I proceed with filling Disput? Pick On of these."
+                    speech = "Ok. I found "+ str(numTxn)+ " transaction from Walmart posted on your account for "+ str(date)+ ". Shall I proceed with filling Dispute? Pick On of these."
                     speech += "1. Unauthorized transaction, 2. Item not received, 3. Debitted Incorrect amount, 4. Chargeback,  5.Others"
                     print(speech)
 
